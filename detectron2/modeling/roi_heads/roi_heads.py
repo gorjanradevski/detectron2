@@ -393,6 +393,9 @@ class Res5ROIHeads(ROIHeads):
         pooler_scales     = (1.0 / input_shape[in_features[0]].stride, )
         sampling_ratio    = cfg.MODEL.ROI_BOX_HEAD.POOLER_SAMPLING_RATIO
         mask_on           = cfg.MODEL.MASK_ON
+        res5_halve        = cfg.MODEL.ROI_BOX_HEAD.RES5HALVE
+        use_attr          = cfg.MODEL.ROI_BOX_HEAD.ATTR
+        num_attrs         = cfg.MODEL.ROI_BOX_HEAD.NUM_ATTRS
         # fmt: on
         assert not cfg.MODEL.KEYPOINT_ON
         assert len(in_features) == 1
@@ -414,8 +417,18 @@ class Res5ROIHeads(ROIHeads):
             cls._build_res5_block = classmethod(cls._build_res5_block)
 
         ret["res5"], out_channels = cls._build_res5_block(cfg)
+        if not res5_halve:
+            print("Modifications for VG in RoI heads (modeling/roi_heads/roi_heads.py):\n"
+                  "\t1. Change the stride of conv1 and shortcut in Res5.Block1 from 2 to 1.\n"
+                  "\t2. Modifying all conv2 with (padding: 1 --> 2) and (dilation: 1 --> 2).\n"
+                  "\tFor more details, please check 'https://github.com/peteanderson80/bottom-up-attention/blob/master/models/vg/ResNet-101/faster_rcnn_end2end_final/test.prototxt'.\n")
+            ret["res5"][0].conv1.stride = (1, 1)
+            ret["res5"][0].shortcut.stride = (1, 1)
+            for i in range(3):
+                ret["res5"][i].conv2.padding = (2, 2)
+                ret["res5"][i].conv2.dilation = (2, 2)
         ret["box_predictor"] = FastRCNNOutputLayers(
-            cfg, ShapeSpec(channels=out_channels, height=1, width=1)
+            cfg, ShapeSpec(channels=out_channels, height=1, width=1), use_attr=use_attr, num_attrs=num_attrs
         )
 
         if mask_on:

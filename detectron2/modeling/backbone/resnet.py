@@ -333,7 +333,7 @@ class BasicStem(CNNBlockBase):
     with a conv, relu and max_pool.
     """
 
-    def __init__(self, in_channels=3, out_channels=64, norm="BN"):
+    def __init__(self, in_channels=3, out_channels=64, norm="BN", caffe_maxpool=False):
         """
         Args:
             norm (str or callable): norm after the first conv layer.
@@ -350,12 +350,18 @@ class BasicStem(CNNBlockBase):
             bias=False,
             norm=get_norm(norm, out_channels),
         )
+        self.caffe_maxpool = caffe_maxpool
+        if self.caffe_maxpool:
+            print("Modifications for VG in ResNet Backbone (modeling/backbone/resnet.py):\n\tUsing pad 0 in stem max_pool instead of pad 1.\n")
         weight_init.c2_msra_fill(self.conv1)
 
     def forward(self, x):
         x = self.conv1(x)
         x = F.relu_(x)
-        x = F.max_pool2d(x, kernel_size=3, stride=2, padding=1)
+        if self.caffe_maxpool:
+            x = F.max_pool2d(x, kernel_size=3, stride=2, padding=0, ceil_mode=True)
+        else:
+            x = F.max_pool2d(x, kernel_size=3, stride=2, padding=1)
         return x
 
 
@@ -624,6 +630,7 @@ def build_resnet_backbone(cfg, input_shape):
         in_channels=input_shape.channels,
         out_channels=cfg.MODEL.RESNETS.STEM_OUT_CHANNELS,
         norm=norm,
+        caffe_maxpool=cfg.MODEL.CAFFE_MAXPOOL,
     )
 
     # fmt: off

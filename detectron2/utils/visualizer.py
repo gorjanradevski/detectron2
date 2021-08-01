@@ -223,6 +223,21 @@ class _PanopticPrediction:
             if mask.sum() > 0:
                 yield mask, sinfo
 
+def _create_text_labels_attr(classes, scores, attr_classes, attr_scores, class_names, attr_names):
+    """
+    Args:
+        classes (list[int] or None):
+        scores (list[float] or None):
+        class_names (list[str] or None):
+    Returns:
+        list[str] or None
+    """
+    labels = [class_names[i] for i in classes]
+    attr_labels = [attr_names[i] for i in attr_classes]
+    labels = ["{} {:.0f}% {} {:.0f}%".format(l, s * 100, ll, ss * 100) for l, s, ll, ss in 
+            zip(labels, scores, attr_labels, attr_scores)]
+    return labels
+
 
 def _create_text_labels(classes, scores, class_names, is_crowd=None):
     """
@@ -385,7 +400,20 @@ class Visualizer:
         boxes = predictions.pred_boxes if predictions.has("pred_boxes") else None
         scores = predictions.scores if predictions.has("scores") else None
         classes = predictions.pred_classes.tolist() if predictions.has("pred_classes") else None
-        labels = _create_text_labels(classes, scores, self.metadata.get("thing_classes", None))
+        # labels = _create_text_labels(classes, scores, self.metadata.get("thing_classes", None))
+        attr_scores = predictions.attr_scores if predictions.has("attr_scores") else None
+        attr_classes = predictions.attr_classes if predictions.has("attr_classes") else None
+        if attr_classes is None:
+            labels = _create_text_labels(classes, scores, self.metadata.get("thing_classes", None))
+        else:
+            labels = _create_text_labels_attr(
+                    classes, 
+                    scores, 
+                    attr_classes, 
+                    attr_scores, 
+                    self.metadata.get("thing_classes", None),
+                    self.metadata.get("attr_classes", None)
+            )
         keypoints = predictions.pred_keypoints if predictions.has("pred_keypoints") else None
 
         if predictions.has("pred_masks"):

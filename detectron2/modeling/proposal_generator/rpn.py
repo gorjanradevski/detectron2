@@ -99,7 +99,9 @@ class StandardRPNHead(nn.Module):
         if len(conv_dims) == 1:
             out_channels = cur_channels if conv_dims[0] == -1 else conv_dims[0]
             # 3x3 conv for the hidden representation
-            self.conv = self._get_rpn_conv(cur_channels, out_channels)
+            # TODO: Proper fix
+            TEST_CONV_CHANNELS = 1024
+            self.conv = self._get_rpn_conv(TEST_CONV_CHANNELS, out_channels)
             cur_channels = out_channels
         else:
             self.conv = nn.Sequential()
@@ -112,6 +114,7 @@ class StandardRPNHead(nn.Module):
                 conv = self._get_rpn_conv(cur_channels, out_channels)
                 self.conv.add_module(f"conv{k}", conv)
                 cur_channels = out_channels
+        
         # 1x1 conv for predicting objectness logits
         self.objectness_logits = nn.Conv2d(cur_channels, num_anchors, kernel_size=1, stride=1)
         # 1x1 conv for predicting box2box transform deltas
@@ -130,7 +133,7 @@ class StandardRPNHead(nn.Module):
             kernel_size=3,
             stride=1,
             padding=1,
-            activation=nn.ReLU(),
+            #activation=nn.ReLU(),
         )
 
     @classmethod
@@ -148,8 +151,16 @@ class StandardRPNHead(nn.Module):
         assert (
             len(set(num_anchors)) == 1
         ), "Each level must have the same number of anchors per spatial position"
+
+        if cfg.MODEL.PROPOSAL_GENERATOR.HID_CHANNELS == -1:
+            hid_channels = in_channels
+        else:
+            hid_channels = cfg.MODEL.PROPOSAL_GENERATOR.HID_CHANNELS
+            print("Modifications for VG in RPN (modeling/proposal_generator/rpn.py):\n"
+                  "\tUse hidden dim %d instead fo the same dim as Res4 (%d).\n" % (hid_channels, in_channels))
+
         return {
-            "in_channels": in_channels,
+            "in_channels": hid_channels,
             "num_anchors": num_anchors[0],
             "box_dim": box_dim,
             "conv_dims": cfg.MODEL.RPN.CONV_DIMS,
