@@ -349,6 +349,7 @@ class FastRCNNOutputLayers(nn.Module):
         smooth_l1_beta: float = 0.0,
         box_reg_loss_type: str = "smooth_l1",
         loss_weight: Union[float, Dict[str, float]] = 1.0,
+        box_dim=4, # Reduntant becuase obtained on in __init__ but anyways
         use_attr=False,
         num_attrs=-1
     ):
@@ -450,8 +451,7 @@ class FastRCNNOutputLayers(nn.Module):
             x = F.relu(x)
             attr_scores = self.attr_score(x)
             return scores, attr_scores, proposal_deltas
-        else:
-            return scores, proposal_deltas
+        return scores, proposal_deltas
 
     def losses(self, predictions, proposals):
         """

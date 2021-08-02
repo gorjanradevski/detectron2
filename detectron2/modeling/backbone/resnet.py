@@ -359,10 +359,8 @@ class BasicStem(CNNBlockBase):
         x = self.conv1(x)
         x = F.relu_(x)
         if self.caffe_maxpool:
-            x = F.max_pool2d(x, kernel_size=3, stride=2, padding=0, ceil_mode=True)
-        else:
-            x = F.max_pool2d(x, kernel_size=3, stride=2, padding=1)
-        return x
+            return F.max_pool2d(x, kernel_size=3, stride=2, padding=0, ceil_mode=True)
+        return F.max_pool2d(x, kernel_size=3, stride=2, padding=1)
 
 
 class ResNet(Backbone):
